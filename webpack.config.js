@@ -41,6 +41,10 @@ function createHTTPSConfig() {
               {
                 type: 2,
                 value: "localhost"
+              },
+              {
+                type: 2,
+                value: "hubs.local"
               }
             ]
           }
@@ -93,6 +97,7 @@ const config = {
     https: createHTTPSConfig(),
     host: "0.0.0.0",
     useLocalIp: true,
+    public: "hubs.local:8080",
     port: 8080,
     before: function(app) {
       // networked-aframe makes HEAD requests to the server for time syncing. Respond with an empty body.
@@ -122,6 +127,14 @@ const config = {
           attrs: ["img:src", "a-asset-item:src", "audio:src", "source:src"],
           // You can get transformed asset urls in an html template using ${require("pathToFile.ext")}
           interpolate: "require"
+        }
+      },
+      {
+        test: /\.worker\.js$/,
+        loader: "worker-loader",
+        options: {
+          name: "assets/js/[name]-[hash].js",
+          publicPath: "/"
         }
       },
       {
@@ -216,6 +229,18 @@ const config = {
       {
         from: "src/assets/images/hub-preview.png",
         to: "hub-preview.png"
+      }
+    ]),
+    new CopyWebpackPlugin([
+      {
+        from: "src/assets/avatars/bot-recording.json",
+        to: "assets/avatars/bot-recording.json"
+      }
+    ]),
+    new CopyWebpackPlugin([
+      {
+        from: "src/assets/avatars/bot-recording.mp3",
+        to: "assets/avatars/bot-recording.mp3"
       }
     ]),
     // Extract required css and add a content hash.

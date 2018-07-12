@@ -18,8 +18,8 @@ AFRAME.registerComponent("character-controller", {
   },
 
   init: function() {
-    this.navGroup;
-    this.navNode;
+    this.navGroup = null;
+    this.navNode = null;
     this.velocity = new THREE.Vector3(0, 0, 0);
     this.accelerationInput = new THREE.Vector3(0, 0, 0);
     this.pendingSnapRotationMatrix = new THREE.Matrix4();
@@ -125,23 +125,25 @@ AFRAME.registerComponent("character-controller", {
       yawMatrix.makeRotationAxis(rotationAxis, rotationDelta);
 
       // Translate to middle of playspace (player rig)
-      root.applyMatrix(transInv);
+      root.matrix.premultiply(transInv);
       // Zero playspace (player rig) rotation
-      root.applyMatrix(rotationInvMatrix);
+      root.matrix.premultiply(rotationInvMatrix);
       // Zero pivot (camera/head) rotation
-      root.applyMatrix(pivotRotationInvMatrix);
+      root.matrix.premultiply(pivotRotationInvMatrix);
       // Apply joystick translation
-      root.applyMatrix(move);
+      root.matrix.premultiply(move);
       // Apply joystick yaw rotation
-      root.applyMatrix(yawMatrix);
+      root.matrix.premultiply(yawMatrix);
       // Apply snap rotation if necessary
-      root.applyMatrix(this.pendingSnapRotationMatrix);
+      root.matrix.premultiply(this.pendingSnapRotationMatrix);
       // Reapply pivot (camera/head) rotation
-      root.applyMatrix(pivotRotationMatrix);
+      root.matrix.premultiply(pivotRotationMatrix);
       // Reapply playspace (player rig) rotation
-      root.applyMatrix(rotationMatrix);
+      root.matrix.premultiply(rotationMatrix);
       // Reapply playspace (player rig) translation
-      root.applyMatrix(trans);
+      root.matrix.premultiply(trans);
+      // update pos/rot/scale
+      root.matrix.decompose(root.position, root.quaternion, root.scale);
 
       // TODO: the above matrix trnsfomraitons introduce some floating point errors in scale, this reverts them to
       // avoid spamming network with fake scale updates
@@ -158,7 +160,7 @@ AFRAME.registerComponent("character-controller", {
   setPositionOnNavMesh: function(startPosition, endPosition, object3D) {
     const nav = this.el.sceneEl.systems.nav;
     if (nav.navMesh) {
-      if (!this.navGroup) {
+      if (this.navGroup == null) {
         this.navGroup = nav.getGroup(endPosition);
       }
       this.navNode = this.navNode || nav.getNode(endPosition, this.navGroup);

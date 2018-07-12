@@ -37,6 +37,7 @@ registerComponent("shape");
 registerComponent("skybox");
 registerComponent("sound", "sound", srcInflator());
 registerComponent("spawn-point");
+registerComponent("sticky-zone");
 registerComponent("super-spawner");
 registerComponent("text");
 registerComponent("visible");
