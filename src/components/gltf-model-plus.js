@@ -91,7 +91,7 @@ const inflateEntities = function(node, templates, gltfPath) {
     }
   }
 
-  const nodeHasBehavior = node.userData.components || node.name in templates;
+  const nodeHasBehavior = node.userData.extensions || node.name in templates;
   if (!nodeHasBehavior && !childEntities.length) {
     return null; // we don't need an entity for this node
   }
@@ -143,7 +143,7 @@ const inflateEntities = function(node, templates, gltfPath) {
     node.parent.animations = node.animations;
   }
 
-  const entityComponents = node.userData.components;
+  const entityComponents = node.userData.extensions;
   if (entityComponents) {
     for (const prop in entityComponents) {
       if (entityComponents.hasOwnProperty(prop) && AFRAME.GLTFModelPlus.components.hasOwnProperty(prop)) {
@@ -152,6 +152,8 @@ const inflateEntities = function(node, templates, gltfPath) {
         if (inflator) {
           inflator(el, componentName, entityComponents[prop], gltfPath);
         }
+      } else {
+        console.warn(`gltf-model-plus: Ignoring unknown component "${prop}".`);
       }
     }
   }
