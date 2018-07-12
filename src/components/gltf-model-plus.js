@@ -260,7 +260,9 @@ AFRAME.registerComponent("gltf-model-plus", {
 
       if (this.data.inflate) {
         this.inflatedEl = inflateEntities(this.model, this.templates, gltfPath);
-        this.el.appendChild(this.inflatedEl);
+        if (this.inflatedEl) {
+          this.el.appendChild(this.inflatedEl);
+        }
         // TODO: Still don't fully understand the lifecycle here and how it differs between browsers, we should dig in more
         // Wait one tick for the appended custom elements to be connected before attaching templates
         await nextTick();
