@@ -18,7 +18,7 @@ registerComponent("billboard");
 registerComponent("body");
 registerComponent("collision-filter");
 registerComponent("css-class");
-registerComponent("gltf-model-plus", "gltf-model-plus", srcInflator);
+registerComponent("gltf-model-plus", "gltf-model-plus", srcInflator());
 registerComponent("hide-when-quality");
 registerComponent("hoverable");
 registerComponent("layers");
