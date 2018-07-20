@@ -135,9 +135,7 @@ const config = {
         test: /\.worker\.js$/,
         loader: "worker-loader",
         options: {
-          name: "assets/js/[name]-[hash].js",
-          publicPath: "/",
-          inline: true
+          name: "assets/js/[name]-[hash].js"
         }
       },
       {
