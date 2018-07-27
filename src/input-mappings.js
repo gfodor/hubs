@@ -141,8 +141,8 @@ const config = {
         trackpad_dpad4_pressed_north_down: ["action_primary_down"],
         trackpad_dpad4_pressed_south_down: ["action_primary_down"],
         trackpadup: ["action_primary_up"],
-        triggerdown: ["action_secondary_down"],
-        triggerup: ["action_secondary_up"],
+        triggerdown: ["action_grab"],
+        triggerup: ["action_release"],
         scroll: "move_duck"
       },
       keyboard: {
