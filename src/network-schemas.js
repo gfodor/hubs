@@ -72,17 +72,67 @@ function registerNetworkSchemas() {
     template: "#video-template",
     components: [
       {
-        component: "position"
+        component: "position",
+        requiresNetworkUpdate: vectorRequiresUpdate(0.001)
       },
       {
-        component: "rotation"
+        component: "rotation",
+        requiresNetworkUpdate: vectorRequiresUpdate(0.5)
       },
       "visible"
     ]
   });
 
   NAF.schemas.add({
+    template: "#interactable-template",
+    components: [
+      {
+        component: "position",
+        requiresNetworkUpdate: vectorRequiresUpdate(0.001)
+      },
+      {
+        component: "rotation",
+        requiresNetworkUpdate: vectorRequiresUpdate(0.5)
+      },
+      "scale",
+      "media-loader"
+    ]
+  });
+
+  NAF.schemas.add({
     template: "#interactable-media",
+    components: [
+      {
+        component: "position",
+        requiresNetworkUpdate: vectorRequiresUpdate(0.001)
+      },
+      {
+        component: "rotation",
+        requiresNetworkUpdate: vectorRequiresUpdate(0.5)
+      },
+      "scale",
+      "media-loader"
+    ]
+  });
+
+  NAF.schemas.add({
+    template: "#interactable-drawing",
+    components: [
+      {
+        component: "position",
+        requiresNetworkUpdate: vectorRequiresUpdate(0.001)
+      },
+      {
+        component: "rotation",
+        requiresNetworkUpdate: vectorRequiresUpdate(0.5)
+      },
+      "scale",
+      "networked-drawing"
+    ]
+  });
+
+  NAF.schemas.add({
+    template: "#pen-interactable",
     components: [
       {
         component: "position",

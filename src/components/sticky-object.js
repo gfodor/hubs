@@ -48,6 +48,7 @@ AFRAME.registerComponent("sticky-object", {
 
   _onRelease() {
     if (
+      !this.el.is("grabbed") &&
       this.data.autoLockOnRelease &&
       this.el.body.velocity.lengthSquared() < this.data.autoLockSpeedLimit * this.data.autoLockSpeedLimit
     ) {

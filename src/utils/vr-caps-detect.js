@@ -46,11 +46,12 @@ export async function getAvailableVREntryTypes() {
   const ua = navigator.userAgent;
   const isSamsungBrowser = browser.name === "chrome" && /SamsungBrowser/.test(ua);
   const isOculusBrowser = /Oculus/.test(ua);
-  const isInHMD = isOculusBrowser;
 
   // This needs to be kept up-to-date with the latest browsers that can support VR and Hubs.
   // Checking for navigator.getVRDisplays always passes b/c of polyfill.
   const isWebVRCapableBrowser = window.hasNativeWebVRImplementation;
+  const isFirefoxReality = window.orientation === 0 && "buildID" in navigator && isWebVRCapableBrowser;
+  const isInHMD = isOculusBrowser || isFirefoxReality;
 
   const isDaydreamCapableBrowser = !!(isWebVRCapableBrowser && browser.name === "chrome" && !isSamsungBrowser);
   const isIDevice = AFRAME.utils.device.isIOS();
@@ -58,12 +59,16 @@ export async function getAvailableVREntryTypes() {
   const isUIWebView = typeof navigator.mediaDevices === "undefined";
 
   const safari = isIDevice
-    ? !isUIWebView ? VR_DEVICE_AVAILABILITY.yes : VR_DEVICE_AVAILABILITY.maybe
+    ? !isUIWebView
+      ? VR_DEVICE_AVAILABILITY.yes
+      : VR_DEVICE_AVAILABILITY.maybe
     : VR_DEVICE_AVAILABILITY.no;
 
   const screen = isInHMD
     ? VR_DEVICE_AVAILABILITY.no
-    : isIDevice && isUIWebView ? VR_DEVICE_AVAILABILITY.maybe : VR_DEVICE_AVAILABILITY.yes;
+    : isIDevice && isUIWebView
+      ? VR_DEVICE_AVAILABILITY.maybe
+      : VR_DEVICE_AVAILABILITY.yes;
 
   let generic = AFRAME.utils.device.isMobile() ? VR_DEVICE_AVAILABILITY.no : VR_DEVICE_AVAILABILITY.maybe;
   let cardboard = VR_DEVICE_AVAILABILITY.no;

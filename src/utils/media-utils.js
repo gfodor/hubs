@@ -18,12 +18,12 @@ export const resolveFarsparkUrl = async url => {
 };
 
 let interactableId = 0;
-export const addMedia = (src, resize = false) => {
+export const addMedia = (src, template, resize = false) => {
   const scene = AFRAME.scenes[0];
 
   const entity = document.createElement("a-entity");
   entity.id = "interactable-media-" + interactableId++;
-  entity.setAttribute("networked", { template: "#interactable-media" });
+  entity.setAttribute("networked", { template: template });
   entity.setAttribute("media-loader", { src, resize });
   scene.appendChild(entity);
   return entity;

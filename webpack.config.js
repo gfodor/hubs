@@ -11,13 +11,7 @@ const CopyWebpackPlugin = require("copy-webpack-plugin");
 const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
 const _ = require("lodash");
 
-const SMOKE_PREFIX = "smoke-";
-
 function createHTTPSConfig() {
-  if (process.env.NODE_ENV === "production") {
-    return false;
-  }
-
   // Generate certs for the local webpack-dev-server.
   if (fs.existsSync(path.join(__dirname, "certs"))) {
     const key = fs.readFileSync(path.join(__dirname, "certs", "key.pem"));
@@ -79,7 +73,7 @@ class LodashTemplatePlugin {
   }
 }
 
-const config = {
+module.exports = (env, argv) => ({
   entry: {
     index: path.join(__dirname, "src", "index.js"),
     hub: path.join(__dirname, "src", "hub.js"),
@@ -91,8 +85,7 @@ const config = {
     filename: "assets/js/[name]-[chunkhash].js",
     publicPath: process.env.BASE_ASSETS_PATH || ""
   },
-  mode: "development",
-  devtool: process.env.NODE_ENV === "production" ? "source-map" : "inline-source-map",
+  devtool: argv.mode === "production" ? "source-map" : "inline-source-map",
   devServer: {
     open: false,
     https: createHTTPSConfig(),
@@ -157,7 +150,6 @@ const config = {
               loader: "css-loader",
               options: {
                 name: "[path][name]-[hash].[ext]",
-                minimize: process.env.NODE_ENV === "production",
                 localIdentName: "[name]__[local]__[hash:base64:5]",
                 camelCase: true
               }
@@ -174,7 +166,6 @@ const config = {
             loader: "css-loader",
             options: {
               name: "[path][name]-[hash].[ext]",
-              minimize: process.env.NODE_ENV === "production",
               localIdentName: "[name]__[local]__[hash:base64:5]",
               camelCase: true
             }
@@ -236,22 +227,10 @@ const config = {
         to: "hub-preview.png"
       }
     ]),
-    new CopyWebpackPlugin([
-      {
-        from: "src/assets/avatars/bot-recording.json",
-        to: "assets/avatars/bot-recording.json"
-      }
-    ]),
-    new CopyWebpackPlugin([
-      {
-        from: "src/assets/avatars/bot-recording.mp3",
-        to: "assets/avatars/bot-recording.mp3"
-      }
-    ]),
     // Extract required css and add a content hash.
     new ExtractTextPlugin({
-      filename: "assets/stylesheets/[name]-[contenthash].css",
-      disable: process.env.NODE_ENV !== "production"
+      filename: "assets/stylesheets/[name]-[md5:contenthash:hex:20].css",
+      disable: argv.mode !== "production"
     }),
     // Transform the output of the html-loader using _.template
     // before passing the result to html-webpack-plugin
@@ -259,8 +238,7 @@ const config = {
       // expose these variables to the lodash template
       // ex: <%= ORIGIN_TRIAL_TOKEN %>
       imports: {
-        HTML_PREFIX: process.env.GENERATE_SMOKE_TESTS ? SMOKE_PREFIX : "",
-        NODE_ENV: process.env.NODE_ENV,
+        NODE_ENV: argv.mode,
         ORIGIN_TRIAL_EXPIRES: process.env.ORIGIN_TRIAL_EXPIRES,
         ORIGIN_TRIAL_TOKEN: process.env.ORIGIN_TRIAL_TOKEN
       }
@@ -268,7 +246,7 @@ const config = {
     // Define process.env variables in the browser context.
     new webpack.DefinePlugin({
       "process.env": JSON.stringify({
-        NODE_ENV: process.env.NODE_ENV,
+        NODE_ENV: argv.mode,
         JANUS_SERVER: process.env.JANUS_SERVER,
         DEV_RETICULUM_SERVER: process.env.DEV_RETICULUM_SERVER,
         ASSET_BUNDLE_SERVER: process.env.ASSET_BUNDLE_SERVER,
@@ -276,31 +254,4 @@ const config = {
       })
     })
   ]
-};
-
-module.exports = () => {
-  if (process.env.GENERATE_SMOKE_TESTS && process.env.BASE_ASSETS_PATH) {
-    const smokeConfig = Object.assign({}, config, {
-      // Set the public path for to point to the correct assets on the smoke-test build.
-      output: Object.assign({}, config.output, {
-        publicPath: process.env.BASE_ASSETS_PATH.replace("://", `://${SMOKE_PREFIX}`)
-      }),
-      // For this config
-      plugins: config.plugins.map(plugin => {
-        if (plugin instanceof HTMLWebpackPlugin) {
-          return new HTMLWebpackPlugin(
-            Object.assign({}, plugin.options, {
-              filename: SMOKE_PREFIX + plugin.options.filename
-            })
-          );
-        }
-
-        return plugin;
-      })
-    });
-
-    return [config, smokeConfig];
-  } else {
-    return config;
-  }
-};
+});

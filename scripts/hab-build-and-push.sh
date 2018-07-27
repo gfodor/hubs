@@ -27,10 +27,10 @@ mkdir -p /usr/local/share
 
 rm /usr/bin/env
 ln -s "$(hab pkg path core/coreutils)/bin/env" /usr/bin/env
-hab pkg install -b core/coreutils core/bash core/node core/yarn core/git core/aws-cli
+hab pkg install -b core/coreutils core/bash core/node/8.11.3 core/yarn core/git core/aws-cli
 
 yarn install --cache-folder .yarn
-GENERATE_SMOKE_TESTS=true yarn build --output-path build
+yarn build --output-path build
 mkdir build/pages
 mv build/*.html build/pages
 

@@ -1,7 +1,6 @@
 console.log(`Hubs version: ${process.env.BUILD_VERSION || "?"}`);
 
 import "./assets/stylesheets/hub.scss";
-import queryString from "query-string";
 
 import { patchWebGLRenderingContext } from "./utils/webgl";
 patchWebGLRenderingContext();
@@ -102,14 +101,10 @@ window.APP.RENDER_ORDER = {
 };
 const store = window.APP.store;
 
-const qs = queryString.parse(location.search);
+const qs = new URLSearchParams(location.search);
 const isMobile = AFRAME.utils.device.isMobile();
 
-if (qs.quality) {
-  window.APP.quality = qs.quality;
-} else {
-  window.APP.quality = isMobile ? "low" : "high";
-}
+window.APP.quality = qs.get("quality") || isMobile ? "low" : "high";
 
 import "aframe-physics-system";
 import "aframe-physics-extras";
@@ -122,6 +117,7 @@ import "./components/event-repeater";
 import "./components/controls-shape-offset";
 import "./components/duck";
 import "./components/quack";
+import "./components/grabbable-toggle";
 
 import "./components/cardboard-controls";
 
@@ -136,10 +132,13 @@ import registerTelemetry from "./telemetry";
 import { getAvailableVREntryTypes, VR_DEVICE_AVAILABILITY } from "./utils/vr-caps-detect.js";
 import ConcurrentLoadDetector from "./utils/concurrent-load-detector.js";
 
+import "./components/tools/pen";
+import "./components/tools/networked-drawing";
+
 function qsTruthy(param) {
-  const val = qs[param];
-  // if the param exists but is not set (e.g. "?foo&bar"), its value is null.
-  return val === null || /1|on|true/i.test(val);
+  const val = qs.get(param);
+  // if the param exists but is not set (e.g. "?foo&bar"), its value is the empty string.
+  return val === "" || /1|on|true/i.test(val);
 }
 
 const isBotMode = qsTruthy("bot");
@@ -168,21 +167,20 @@ store.init();
 
 function mountUI(scene, props = {}) {
   const disableAutoExitOnConcurrentLoad = qsTruthy("allow_multi");
-  const forcedVREntryType = qs.vr_entry_type || null;
+  const forcedVREntryType = qs.get("vr_entry_type");
   const enableScreenSharing = qsTruthy("enable_screen_sharing");
-  const htmlPrefix = document.body.dataset.htmlPrefix || "";
   const showProfileEntry = !store.state.activity.hasChangedName;
 
   ReactDOM.render(
     <UIRoot
       {...{
         scene,
+        isBotMode,
         concurrentLoadDetector,
         disableAutoExitOnConcurrentLoad,
         forcedVREntryType,
         enableScreenSharing,
         store,
-        htmlPrefix,
         showProfileEntry,
         ...props
       }}
@@ -239,7 +237,9 @@ const onReady = async () => {
 
   const enterScene = async (mediaStream, enterInVR, hubId) => {
     const scene = document.querySelector("a-scene");
-    scene.classList.add("no-cursor");
+    if (!isBotMode) {
+      scene.classList.add("no-cursor");
+    }
     scene.renderer.sortObjects = true;
     const playerRig = document.querySelector("#player-rig");
     document.querySelector("canvas").classList.remove("blurred");
@@ -270,7 +270,7 @@ const onReady = async () => {
     applyProfileOnPlayerRig();
     store.addEventListener("statechanged", applyProfileOnPlayerRig);
 
-    const avatarScale = parseInt(qs.avatar_scale, 10);
+    const avatarScale = parseInt(qs.get("avatar_scale"), 10);
 
     if (avatarScale) {
       playerRig.setAttribute("scale", { x: avatarScale, y: avatarScale, z: avatarScale });
@@ -307,7 +307,7 @@ const onReady = async () => {
 
     const offset = { x: 0, y: 0, z: -1.5 };
     const spawnMediaInfrontOfPlayer = url => {
-      const entity = addMedia(url, true);
+      const entity = addMedia(url, "#interactable-media", true);
       entity.setAttribute("offset-relative-to", {
         target: "#player-camera",
         offset
@@ -381,25 +381,24 @@ const onReady = async () => {
         playerRig.setAttribute("avatar-replay", {
           camera: "#player-camera",
           leftController: "#player-left-controller",
-          rightController: "#player-right-controller",
-          recordingUrl: "/assets/avatars/bot-recording.json"
+          rightController: "#player-right-controller"
         });
 
         const audioEl = document.createElement("audio");
-        audioEl.loop = true;
-        audioEl.muted = true;
-        audioEl.crossorigin = "anonymous";
-        audioEl.src = "/assets/avatars/bot-recording.mp3";
-        document.body.appendChild(audioEl);
-
-        // Wait for runner script to interact with the page so that we can play audio.
-        const interacted = new Promise(resolve => {
-          window.interacted = resolve;
-        });
-        const canPlay = new Promise(resolve => {
-          audioEl.addEventListener("canplay", resolve);
-        });
-        await Promise.all([canPlay, interacted]);
+        const audioInput = document.querySelector("#bot-audio-input");
+        audioInput.onchange = () => {
+          audioEl.loop = true;
+          audioEl.muted = true;
+          audioEl.crossorigin = "anonymous";
+          audioEl.src = URL.createObjectURL(audioInput.files[0]);
+          document.body.appendChild(audioEl);
+        };
+        const dataInput = document.querySelector("#bot-data-input");
+        dataInput.onchange = () => {
+          const url = URL.createObjectURL(dataInput.files[0]);
+          playerRig.setAttribute("avatar-replay", { recordingUrl: url });
+        };
+        await new Promise(resolve => audioEl.addEventListener("canplay", resolve));
         mediaStream.addTrack(audioEl.captureStream().getAudioTracks()[0]);
         audioEl.play();
       }
@@ -443,9 +442,9 @@ const onReady = async () => {
     return;
   }
 
-  if (qs.required_version && process.env.BUILD_VERSION) {
+  if (qs.get("required_version") && process.env.BUILD_VERSION) {
     const buildNumber = process.env.BUILD_VERSION.split(" ", 1)[0]; // e.g. "123 (abcd5678)"
-    if (qs.required_version !== buildNumber) {
+    if (qs.get("required_version") !== buildNumber) {
       remountUI({ roomUnavailableReason: "version_mismatch" });
       setTimeout(() => document.location.reload(), 5000);
       exitScene();
@@ -454,7 +453,9 @@ const onReady = async () => {
   }
 
   getAvailableVREntryTypes().then(availableVREntryTypes => {
-    if (availableVREntryTypes.gearvr === VR_DEVICE_AVAILABILITY.yes) {
+    if (availableVREntryTypes.isInHMD) {
+      remountUI({ availableVREntryTypes, forcedVREntryType: "vr" });
+    } else if (availableVREntryTypes.gearvr === VR_DEVICE_AVAILABILITY.yes) {
       remountUI({ availableVREntryTypes, forcedVREntryType: "gearvr" });
     } else {
       remountUI({ availableVREntryTypes });
@@ -475,7 +476,6 @@ const onReady = async () => {
       const noop = () => {};
       // Replace renderer with a noop renderer to reduce bot resource usage.
       scene.renderer = { setAnimationLoop: noop, render: noop };
-      document.body.style.display = "none";
     }
   });
   environmentRoot.appendChild(initialEnvironmentEl);
@@ -493,9 +493,9 @@ const onReady = async () => {
     }
   };
 
-  if (qs.room) {
+  if (qs.has("room")) {
     // If ?room is set, this is `yarn start`, so just use a default environment and query string room.
-    setRoom(qs.room || "default");
+    setRoom(qs.get("room") || "default");
     initialEnvironmentEl.setAttribute("gltf-bundle", {
       src: DEFAULT_ENVIRONMENT_URL
     });
@@ -503,7 +503,7 @@ const onReady = async () => {
   }
 
   // Connect to reticulum over phoenix channels to get hub info.
-  const hubId = qs.hub_id || document.location.pathname.substring(1).split("/")[0];
+  const hubId = qs.get("hub_id") || document.location.pathname.substring(1).split("/")[0];
   console.log(`Hub ID: ${hubId}`);
 
   const socket = connectToReticulum();

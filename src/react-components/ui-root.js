@@ -2,7 +2,6 @@ import React, { Component } from "react";
 import PropTypes from "prop-types";
 import classNames from "classnames";
 import { VR_DEVICE_AVAILABILITY } from "../utils/vr-caps-detect";
-import queryString from "query-string";
 import { IntlProvider, FormattedMessage, addLocaleData } from "react-intl";
 import en from "react-intl/locale-data/en";
 import MovingAverage from "moving-average";
@@ -23,8 +22,8 @@ import InfoDialog from "./info-dialog.js";
 import TwoDHUD from "./2d-hud";
 import Footer from "./footer";
 
-import FontAwesomeIcon from "@fortawesome/react-fontawesome";
-import faQuestion from "@fortawesome/fontawesome-free-solid/faQuestion";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faQuestion } from "@fortawesome/free-solid-svg-icons/faQuestion";
 
 addLocaleData([...en]);
 
@@ -61,10 +60,10 @@ class UIRoot extends Component {
     disableAutoExitOnConcurrentLoad: PropTypes.bool,
     forcedVREntryType: PropTypes.string,
     enableScreenSharing: PropTypes.bool,
+    isBotMode: PropTypes.bool,
     store: PropTypes.object,
     scene: PropTypes.object,
     linkChannel: PropTypes.object,
-    htmlPrefix: PropTypes.string,
     showProfileEntry: PropTypes.bool,
     availableVREntryTypes: PropTypes.object,
     initialEnvironmentLoaded: PropTypes.bool,
@@ -281,12 +280,12 @@ class UIRoot extends Component {
 
       // We are not in mobile chrome, so launch into chrome via an Intent URL
       const location = window.location;
-      const qs = queryString.parse(location.search);
-      qs.vr_entry_type = "daydream"; // Auto-choose 'daydream' after landing in chrome
+      const qs = new URLSearchParams(location.search);
+      qs.set("vr_entry_type", "daydream"); // Auto-choose 'daydream' after landing in chrome
 
       const intentUrl =
-        `intent://${location.host}${location.pathname || ""}?` +
-        `${queryString.stringify(qs)}#Intent;scheme=${(location.protocol || "http:").replace(":", "")};` +
+        `intent://${location.host}${location.pathname}?` +
+        `${qs}#Intent;scheme=${location.protocol.replace(":", "")};` +
         `action=android.intent.action.VIEW;package=com.android.chrome;end;`;
 
       window.location = intentUrl;
@@ -326,7 +325,7 @@ class UIRoot extends Component {
           mediaSource: "screen",
           // Work around BMO 1449832 by calculating the width. This will break for multi monitors if you share anything
           // other than your current monitor that has a different aspect ratio.
-          width: 720 * screen.width / screen.height,
+          width: 720 * (screen.width / screen.height),
           height: 720,
           frameRate: 30
         }
@@ -588,6 +587,16 @@ class UIRoot extends Component {
             <div className="exited-panel__subtitle">{subtitle}</div>
           </div>
         </IntlProvider>
+      );
+    }
+
+    if (this.props.isBotMode) {
+      return (
+        <div className="loading-panel">
+          <img className="loading-panel__logo" src="../assets/images/logo.svg" />
+          <input type="file" id="bot-audio-input" accept="audio/*" />
+          <input type="file" id="bot-data-input" accept="application/json" />
+        </div>
       );
     }
 
@@ -854,11 +863,7 @@ class UIRoot extends Component {
                 <div className={dialogBoxContentsClassNames}>{dialogContents}</div>
 
                 {this.state.showProfileEntry && (
-                  <ProfileEntryPanel
-                    finished={this.onProfileFinished}
-                    store={this.props.store}
-                    htmlPrefix={this.props.htmlPrefix}
-                  />
+                  <ProfileEntryPanel finished={this.onProfileFinished} store={this.props.store} />
                 )}
               </div>
             )}

@@ -15,6 +15,11 @@ AFRAME.registerComponent("super-spawner", {
     src: { default: "https://asset-bundles-prod.reticulum.io/interactables/Ducky/DuckyMesh-438ff8e022.gltf" },
 
     /**
+     * The template to use for this object
+     */
+    template: { default: "" },
+
+    /**
      * Spawn the object at a custom position, rather than at the center of the spanwer.
      */
     useCustomSpawnPosition: { default: false },
@@ -25,6 +30,12 @@ AFRAME.registerComponent("super-spawner", {
      */
     useCustomSpawnRotation: { default: false },
     spawnRotation: { type: "vec4" },
+
+    /**
+     * Spawn the object with a custom scale, rather than copying that of the spawner.
+     */
+    useCustomSpawnScale: { default: false },
+    spawnScale: { type: "vec3" },
 
     /**
      * The events to emit for programmatically grabbing and releasing objects
@@ -83,13 +94,14 @@ AFRAME.registerComponent("super-spawner", {
     const thisGrabId = nextGrabId++;
     this.heldEntities.set(hand, thisGrabId);
 
-    const entity = addMedia(this.data.src);
+    const entity = addMedia(this.data.src, this.data.template);
     entity.object3D.position.copy(
       this.data.useCustomSpawnPosition ? this.data.spawnPosition : this.el.object3D.position
     );
     entity.object3D.rotation.copy(
       this.data.useCustomSpawnRotation ? this.data.spawnRotation : this.el.object3D.rotation
     );
+    entity.object3D.scale.copy(this.data.useCustomSpawnRotation ? this.data.spawnScale : this.el.object3D.scale);
 
     this.activateCooldown();
 
@@ -109,7 +121,7 @@ AFRAME.registerComponent("super-spawner", {
 
   onGrabEnd(e) {
     this.heldEntities.delete(e.detail.hand);
-    // This tells super-hands we are handling this releae
+    // This tells super-hands we are handling this release
     e.preventDefault();
   },
 
